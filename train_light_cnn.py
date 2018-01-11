@@ -41,11 +41,11 @@ parser.add_argument('--model', default='LightCNN-29', type=str, metavar='Model',
                     help='model type: LightCNN-9, LightCNN-29')
 parser.add_argument('--checkpoint', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('--root_path', default='', type=str, metavar='PATH',
+parser.add_argument('--root_path', default='/home/hezhenhao/OFD/OFD_full_DB_labelled/', type=str, metavar='PATH',
                     help='path to root path of images (default: none)')
-parser.add_argument('--train_list', default='', type=str, metavar='PATH',
+parser.add_argument('--train_list', default='/home/hezhenhao/OFD/image_list.txt', type=str, metavar='PATH',
                     help='path to training list (default: none)')
-parser.add_argument('--val_list', default='', type=str, metavar='PATH',
+parser.add_argument('--val_list', default='/home/hezhenhao/OFD/image_list.txt', type=str, metavar='PATH',
                     help='path to validation list (default: none)')
 parser.add_argument('--save_path', default='checkpoint/', type=str, metavar='PATH',
                     help='path to save checkpoint (default: ./checkpoint/)')
@@ -109,8 +109,7 @@ def main():
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])),
-        batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True)
+        batch_size=args.batch_size, shuffle=True)
 
     val_loader = torch.utils.data.DataLoader(
         ImageList(root=args.root_path, fileList=args.val_list, 
@@ -118,8 +117,7 @@ def main():
                 transforms.ToTensor(),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])),
-        batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True)   
+        batch_size=args.batch_size, shuffle=True)
 
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss()

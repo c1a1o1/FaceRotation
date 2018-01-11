@@ -17,6 +17,7 @@ _batch_size = 64
 cuda = True
 cudnn.benchmark = True
         
+#load dataloader
 train_loader = data.DataLoader(
     my_datasets(data_root = "/home/hezhenhao/OFD/OFD_full_DB_labelled",
                 transform = transforms.Compose([
@@ -25,16 +26,13 @@ train_loader = data.DataLoader(
                 ])),
     batch_size = _batch_size, shuffle = True)
 
-# val_loader = data.DataLoader(
-#     my_datasets(data_root = "/home/hezhenhao/OFD/OFD_full_DB_labelled", train = False, transform = transforms.Compose([transforms.ToTensor()])),
-#     batch_size = _batch_size,
-#     shuffle = True)
-
+#load model
 D = Discriminator()
-#G = Global(num_classes = 1000)
 G = Global()
+
 #loss function and regularization
 alpha = 1e-3
+lamda0 = 10.0
 lamda1 = 0.3
 lamda2 = 1e-3
 lamda3 = 3e-3
@@ -44,6 +42,8 @@ bce_loss = nn.BCELoss()
 cross_entropy_loss = nn.CrossEntropyLoss()
 
 learning_rate = 2e-3
+
+#optimizer
 optimizer_d = torch.optim.Adam(D.parameters(), lr = learning_rate)
 optimizer_g = torch.optim.Adam(G.parameters(), lr = learning_rate)
 
@@ -105,7 +105,7 @@ cudnn.benchmark = True
 
 #record the log in log_tp_gan.txt
 
-log = open('log2.txt', "w")
+log = open('log2.txt', "a")
 
 for epoch in range(iter):
 #     if (epoch != 0) & (epoch % 10 == 0):

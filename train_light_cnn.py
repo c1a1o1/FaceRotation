@@ -19,17 +19,14 @@ from model.light_cnn import LightCNN_9Layers, LightCNN_29Layers
 from util.load_imglist import ImageList
 
 parser = argparse.ArgumentParser(description='PyTorch Light CNN Training')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='LightCNN')
 parser.add_argument('--cuda', '-c', default=True)
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 16)')
 parser.add_argument('--epochs', default=80, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=128, type=int,
                     metavar='N', help='mini-batch size (default: 128)')
-parser.add_argument('--lr', '--learning-rate', default=0.0005, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.005, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -41,11 +38,11 @@ parser.add_argument('--model', default='LightCNN-29', type=str, metavar='Model',
                     help='model type: LightCNN-9, LightCNN-29')
 parser.add_argument('--checkpoint', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('--root_path', default='/home/hezhenhao/OFD/OFD_full_DB_labelled/', type=str, metavar='PATH',
+parser.add_argument('--root_path', default='/home/hezhenhao/data1/', type=str, metavar='PATH',
                     help='path to root path of images (default: none)')
-parser.add_argument('--train_list', default='/home/hezhenhao/OFD/image_list.txt', type=str, metavar='PATH',
+parser.add_argument('--train_list', default='/home/hezhenhao/image_list.txt', type=str, metavar='PATH',
                     help='path to training list (default: none)')
-parser.add_argument('--val_list', default='/home/hezhenhao/OFD/image_list.txt', type=str, metavar='PATH',
+parser.add_argument('--val_list', default='/home/hezhenhao/image_list.txt', type=str, metavar='PATH',
                     help='path to validation list (default: none)')
 parser.add_argument('--save_path', default='checkpoint/', type=str, metavar='PATH',
                     help='path to save checkpoint (default: ./checkpoint/)')
@@ -71,16 +68,16 @@ def main():
 
     # optionally resume from a checkpoint
     if args.checkpoint:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+        if os.path.isfile(args.checkpoint):
+            print("=> loading checkpoint '{}'".format(args.checkpoint))
+            checkpoint = torch.load(args.checkpoint)
             args.start_epoch = checkpoint['epoch']
             args.lr = checkpoint['lr']
             model.load_state_dict(checkpoint['state_dict'])
             print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+                  .format(args.checkpoint, checkpoint['epoch']))
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no checkpoint found at '{}'".format(args.checkpoint))
     
     ## large lr for last fc parameters
     #params = []
@@ -111,22 +108,21 @@ def main():
             ])),
         batch_size=args.batch_size, shuffle=True)
 
-    val_loader = torch.utils.data.DataLoader(
-        ImageList(root=args.root_path, fileList=args.val_list, 
-            transform=transforms.Compose([ 
-                transforms.ToTensor(),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            ])),
-        batch_size=args.batch_size, shuffle=True)
+    #val_loader = torch.utils.data.DataLoader(
+    #    ImageList(root=args.root_path, fileList=args.val_list, 
+    #        transform=transforms.Compose([ 
+    #            transforms.ToTensor(),
+    #            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    #        ])),
+    #    batch_size=args.batch_size, shuffle=True)
 
     # define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
 
     if args.cuda:
         criterion.cuda()
-
-    #validate(val_loader, model, criterion)    
-
+    
+    #train model
     for epoch in range(args.start_epoch, args.epochs):
 
         adjust_learning_rate(optimizer, epoch)
@@ -135,14 +131,14 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch)
 
         # evaluate on validation set
-        prec1 = validate(val_loader, model, criterion)
+        #prec1 = validate(val_loader, model, criterion)
 
         save_name = args.save_path + 'lightCNN_' + str(epoch+1) + '_checkpoint.pth.tar'
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
             'state_dict': model.state_dict(),
-            'prec1': prec1,
+            #'prec1': prec1,
             'lr': args.lr,
         }, save_name)
 
@@ -159,15 +155,17 @@ def train(train_loader, model, criterion, optimizer, epoch):
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
         data_time.update(time.time() - end)
+        
+        if args.cuda:
+            input = input.cuda()
+            target = target.cuda()
 
-        input      = input.cuda()
-        target     = target.cuda()
         input_var  = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
         # compute output
         output, _ = model(input_var)
-        loss   = criterion(output, target_var)
+        loss = criterion(output, target_var)
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output.data, target, topk=(1,5))
@@ -205,8 +203,10 @@ def validate(val_loader, model, criterion):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        input      = input.cuda()
-        target     = target.cuda()
+        if args.cuda:
+            input      = input.cuda()
+            target     = target.cuda()
+        
         input_var  = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
 

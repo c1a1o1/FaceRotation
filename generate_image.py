@@ -1,24 +1,46 @@
+import os
+import argparse
+from PIL import Image
+
 import torch
 import torch.nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
-from PIL import Image
-import os
+import numpy as np
 
-def recover_image(img):
-    return (
-        (
-            img *
-            np.array([0.5, 0.5, 0.5]).reshape((1, 3, 1, 1)) +
-            np.array([0.5, 0.5, 0.5]).reshape((1, 3, 1, 1))
-        ).transpose(0, 2, 3, 1) *
-        255.
-    ).clip(0, 255).astype(np.uint8)
+from model.tp_gan import Global
+from util import recover_image
 
-def test(_model, transform, test_list, save_root):
-    _model.eval()
+def main(model_checkpoint, test_list, save_root):
+    global args
+    args = parser.parse_args()
+    
+    #get the value of the network setting
+    model_checkpoint = args.checkpoint
+    test_list = args.test_list
+    save_root = args.save_root
+    num_classes = args.num_classes
+
+    #load state_dict
+    model = Global(num_classes)
+    if args.cuda:
+        model = model.cuda()
+    checkpoint = torch.load(model_checkpoint)
+    #G.load_state_dict(checkpoint['state_dict_g'])
+
+    """
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for k, v in checkpoint['state_dict_g'].items():
+        name = k[7:] # remove `module.`
+        new_state_dict[name] = v
+    #load params    
+    G.load_state_dict(new_state_dict)
+    """
+
+    model.eval()
     
     with open(test_list, 'r') as file:
         count = 0
@@ -62,28 +84,6 @@ def test(_model, transform, test_list, save_root):
             #vutils.save_image(img_fake[0].data, os.path.join(save_root, 'eval_' + str(count) + ".jpg"), normalize=False)
             print("%d is done" % count)
 
-def model():
-    #load state_dict
-
-    #G = Global(num_classes=1000)
-    #G = torch.nn.DataParallel(G).cuda()
-    G = Global()
-
-    checkpoint_path = '/home/hezhenhao/TP-GAN144_checkpoint.pth'
-    checkpoint = torch.load(checkpoint_path)
-
-    #G.load_state_dict(checkpoint['state_dict_g'])
-
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
-    for k, v in checkpoint['state_dict_g'].items():
-        name = k[7:] # remove `module.`
-        new_state_dict[name] = v
-    
-    #load params    
-    G.load_state_dict(new_state_dict)
-    return G
-
 test(model(), transform = transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -91,3 +91,6 @@ test(model(), transform = transforms.Compose([
      test_list = '/home/hezhenhao/test_set.txt',
      save_root = '/home/hezhenhao/pic'
     )
+
+if __name__ = '__main__':
+    main()
